@@ -18,6 +18,12 @@ import {
 import Header from '../components/Header';
 import BottomNavigation from '../components/BottomNavigation';
 import Voice from '@react-native-community/voice';
+import Tts from 'react-native-tts';
+
+Tts.setDefaultLanguage('ko-KR');        // 한국어
+Tts.setDefaultRate(0.5, true);          // 속도 (0~1)
+Tts.setDefaultPitch(1.0);               // 음높이
+
 
 interface ChatScreenProps {
   navigation: any;
@@ -196,6 +202,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ navigation }) => {
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, newAiMessage]);
+      Tts.speak(randomResponse);
     }, 1000);
   };
 
