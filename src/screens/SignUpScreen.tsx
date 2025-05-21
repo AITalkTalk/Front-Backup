@@ -11,6 +11,9 @@ import {
   StatusBar,
 } from 'react-native';
 
+import API from '../api/axios'; // 수정된 import
+import Config from 'react-native-config';
+console.log('API_URL=', Config.API_URL);
 interface SignUpScreenProps {
   navigation: any;
 }
@@ -23,7 +26,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
   const [age, setAge] = useState('');
   const [interests, setInterests] = useState<string[]>([]);
 
-  const interestOptions = ['수학', '과학', '독서', '음악', '미술', '운동', '역사', '언어'];
+  const interestOptions = ['학업', '친구', '건강', '가정'];
 
   const toggleInterest = (interest: string) => {
     if (interests.includes(interest)) {
@@ -33,7 +36,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
     }
   };
 
-  const handleSignUp = () => {
+  const handleSignUp = async () => {
     // 기본 유효성 검사
     if (id.trim() === '' || password.trim() === '' || name.trim() === '' || age.trim() === '') {
       Alert.alert('경고', '모든 필수 항목을 입력해주세요.');
@@ -50,10 +53,33 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
       return;
     }
 
-    // 회원가입 성공 후 로그인 화면으로 이동
-    Alert.alert('성공', '회원가입이 완료되었습니다. 로그인해주세요.', [
-      { text: '확인', onPress: () => navigation.navigate('Login') }
-    ]);
+    try {
+      const res = await API.post('/sign-up', {
+        id,
+        password,
+      });
+      // 201 or 200 으로 응답 돌아오면 성공 처리
+      if (res.status === 201 || res.status === 200) {
+        Alert.alert('회원가입 성공', '이제 로그인해주세요.', [
+          { text: '확인', onPress: () => navigation.navigate('Login') },
+        ]);
+      } else {
+        Alert.alert('회원가입 실패', `서버 응답 코드: ${res.status}`);
+      }
+    } catch (err: any) {
+      console.error(err);
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data ||
+        err.message ||
+        '알 수 없는 오류가 발생했습니다.';
+      Alert.alert('회원가입 실패', msg);
+    }
+
+    // // 회원가입 성공 후 로그인 화면으로 이동
+    // Alert.alert('성공', '회원가입이 완료되었습니다. 로그인해주세요.', [
+    //   { text: '확인', onPress: () => navigation.navigate('Login') }
+    // ]);
   };
 
   return (
