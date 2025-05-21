@@ -19,6 +19,9 @@ import Header from '../components/Header';
 import BottomNavigation from '../components/BottomNavigation';
 import Voice from '@react-native-community/voice';
 import Tts from 'react-native-tts';
+import API from '../api/axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
 
 Tts.setDefaultLanguage('ko-KR');        // 한국어
 Tts.setDefaultRate(0.5, true);          // 속도 (0~1)
@@ -174,36 +177,125 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ navigation }) => {
     };
   }, [hasVoiceInput]);
 
-  const handleSendMessage = (text?: string) => {
-    const messageText = text || inputText;
-    if (messageText.trim() === '') return;
+  // const handleSendMessage = (text?: string) => {
+  //   const messageText = text || inputText;
+  //   if (messageText.trim() === '') return;
 
+  //   const newUserMessage: Message = {
+  //     id: Date.now().toString(),
+  //     text: messageText,
+  //     sender: 'user',
+  //     timestamp: new Date(),
+  //   };
+
+  //   setMessages([...messages, newUserMessage]);
+  //   setInputText('');
+  //   setVoiceText('');
+  //   setHasVoiceInput(false);
+  //   setShowVoiceInput(false);
+  //   setIsFallback(false);
+
+  //   // AI 응답 시뮬레이션 (실제로는 백엔드 API 호출 필요)
+  //   setTimeout(() => {
+  //     const randomResponse = aiResponses[Math.floor(Math.random() * aiResponses.length)];
+  //     const newAiMessage: Message = {
+  //       id: (Date.now() + 1).toString(),
+  //       text: randomResponse,
+  //       sender: 'ai',
+  //       timestamp: new Date(),
+  //     };
+  //     setMessages(prev => [...prev, newAiMessage]);
+  //     Tts.speak(randomResponse);
+  //   }, 1000);
+  // };
+
+  const handleSendMessage = async (overrideText?: string) => {
+    const messageText = overrideText ?? inputText.trim();
+    if (!messageText) return;
+  
+    // 1) 사용자 메시지 화면에 추가
     const newUserMessage: Message = {
       id: Date.now().toString(),
       text: messageText,
       sender: 'user',
       timestamp: new Date(),
     };
-
-    setMessages([...messages, newUserMessage]);
+    setMessages(prev => [...prev, newUserMessage]);
     setInputText('');
     setVoiceText('');
     setHasVoiceInput(false);
     setShowVoiceInput(false);
     setIsFallback(false);
+  
+    try {
+      // 1) 저장해둔 토큰 꺼내기
+      const token = await AsyncStorage.getItem('jwt');
+      if (!token) {
+        Alert.alert('인증 오류', '로그인 후 다시 시도하세요.');
+        return;
+      }
 
-    // AI 응답 시뮬레이션 (실제로는 백엔드 API 호출 필요)
-    setTimeout(() => {
-      const randomResponse = aiResponses[Math.floor(Math.random() * aiResponses.length)];
+      console.log('API 요청 시작:', {
+        url: '/chat',
+        prompt: messageText,
+        tokenExists: !!token
+      });
+
+      // 2) /chat 요청에 Authorization 헤더 추가
+      const res = await API.post(
+        '/chat',
+        { prompt: messageText },
+        { headers: { Authorization: token } }
+      );
+      console.log('📦 /chat 응답 전체:', res.data);
+      
+      console.log('API 응답 성공:', res.data);
+      
+      // 3) 응답 데이터 구조 확인 및 추출
+      const aiText =
+        typeof res.data === 'string'
+          ? res.data
+          : res.data.data?.response
+          ?? res.data.data
+          ?? res.data.message
+          ?? '죄송해요, 응답을 받을 수 없었어요.';
+      
+      // 4) AI 메시지 화면에 추가
       const newAiMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: randomResponse,
+        text: aiText,
         sender: 'ai',
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, newAiMessage]);
-      Tts.speak(randomResponse);
-    }, 1000);
+      Tts.speak(aiText);
+    } catch (err: any) {
+      console.error('Chat API 에러:', err);
+      
+      // 상세 에러 로깅
+      if (axios.isAxiosError(err)) {
+        console.error('Axios 에러 상세 정보:', {
+          status: err.response?.status,
+          data: err.response?.data,
+          headers: err.response?.headers,
+          config: {
+            url: err.config?.url,
+            method: err.config?.method,
+            baseURL: err.config?.baseURL,
+            headers: err.config?.headers
+          }
+        });
+        
+        const serverMsg = err.response?.data?.message
+                      || err.response?.data
+                      || err.message;
+        Alert.alert('Chat API 에러', `서버 응답: ${serverMsg}`);
+      } 
+      else {
+        console.error('일반 에러:', err);
+        Alert.alert('Chat API 에러', err.message || '알 수 없는 오류');
+      }
+    }
   };
 
   // 폴백 메커니즘: 음성 인식 실패시 대체 텍스트 표시
