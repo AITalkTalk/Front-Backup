@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -9,21 +9,52 @@ import {
   Alert,
   TextInput,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import Header from '../components/Header';
 import BottomNavigation from '../components/BottomNavigation';
+import API from '../api/axios';  // axios 인스턴스
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
+interface UserInfo {
+  name: string;
+  age: number;
+  point: number;
+  secret: string;
+  interest: string;
+}
 interface MyPageScreenProps {
   navigation: any;
 }
 
 const MyPageScreen: React.FC<MyPageScreenProps> = ({ navigation }) => {
   const [showParentModal, setShowParentModal] = useState(false);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [loadingInfo, setLoadingInfo] = useState(true);
   const [parentCode, setParentCode] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedInterests, setSelectedInterests] = useState<string[]>(['과학', '미술']);
   
   const interestOptions = ['학업', '친구', '건강', '가정'];
+  // **마운트 시 /info 호출**
+  useEffect(() => {
+    const fetchInfo = async () => {
+      try {
+        const token = await AsyncStorage.getItem('jwt');
+        const res = await API.get('/info', { headers: { Authorization: token } });
+        // 예시: { status:0, message:"OK", data: { name, age, point, secret, interest } }
+        
+        const info: UserInfo = res.data.data;
+        setUserInfo(info);
+      } catch (err) {
+        console.error('유저 정보 조회 에러', err);
+        Alert.alert('오류', '유저 정보를 불러올 수 없습니다.');
+      } finally {
+        setLoadingInfo(false);
+      }
+    };
+    fetchInfo();
+  }, []);
 
   const handleLogout = () => {
     Alert.alert(
@@ -70,14 +101,16 @@ const MyPageScreen: React.FC<MyPageScreenProps> = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <Header navigation={navigation} title="마이페이지" />
-
+      {loadingInfo ? (
+        <ActivityIndicator size="large" style={{ flex:1, justifyContent:'center' }} />
+      ) : (
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.profileSection}>
           <View style={styles.profileAvatar}>
-            <Text style={styles.profileAvatarText}>김</Text>
+            <Text style={styles.profileAvatarText}>{userInfo?.name.charAt(0) /* 성 첫 글자 */}</Text>
           </View>
-          <Text style={styles.profileName}>김똑똑</Text>
-          <Text style={styles.profileInfo}>8세 | 초등학교 1학년</Text>
+          <Text style={styles.profileName}>{userInfo?.name}</Text>
+          <Text style={styles.profileInfo}>{userInfo?.age}세</Text>
         </View>
 
         <View style={styles.statsSection}>
@@ -148,7 +181,7 @@ const MyPageScreen: React.FC<MyPageScreenProps> = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
-
+)}
       {/* 부모 비밀번호 확인 모달 */}
       <Modal
         visible={showParentModal}
