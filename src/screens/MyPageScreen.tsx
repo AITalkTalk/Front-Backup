@@ -23,7 +23,7 @@ const MyPageScreen: React.FC<MyPageScreenProps> = ({ navigation }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedInterests, setSelectedInterests] = useState<string[]>(['과학', '미술']);
   
-  const interestOptions = ['수학', '과학', '독서', '음악', '미술', '운동', '역사', '언어'];
+  const interestOptions = ['학업', '친구', '건강', '가정'];
 
   const handleLogout = () => {
     Alert.alert(
