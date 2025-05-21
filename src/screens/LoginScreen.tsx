@@ -10,7 +10,9 @@ import {
   Alert,
   StatusBar,
 } from 'react-native';
-
+import API from '../api/axios'; // 수정된 import
+import Config from 'react-native-config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 interface LoginScreenProps {
   navigation: any;
 }
@@ -19,15 +21,45 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [id, setId] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     // 추후 백엔드 연동 구현
     if (id.trim() === '' || password.trim() === '') {
       Alert.alert('경고', '아이디와 비밀번호를 입력해주세요.');
       return;
     }
-    
+    try {
+      const res = await API.post('/sign-in', {
+        id,
+        password,
+      });
+      // 201 or 200 으로 응답 돌아오면 성공 처리
+      if (res.status === 200) {
+         // Swagger 예시대로 res.data = { status, message, data: { grantType, accessToken, refreshToken } }
+        const { grantType, accessToken, refreshToken } = res.data.data;
+
+        // "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        const fullToken = `${grantType} ${accessToken}`;
+
+        // 토큰 저장
+        await AsyncStorage.setItem('jwt', fullToken);
+        await AsyncStorage.setItem('refreshToken', refreshToken);
+        Alert.alert('로그인 성공', '메인 화면으로 이동합니다.', [
+          { text: '확인', onPress: () => navigation.navigate('Main') },
+        ]);
+      } else {
+        Alert.alert('로그인 실패', `서버 응답 코드: ${res.status}`);
+      }
+    } catch (err: any) {
+      console.error(err);
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data ||
+        err.message ||
+        '알 수 없는 오류가 발생했습니다.';
+      Alert.alert('로그인 실패', msg);
+    }
     // 성공적인 로그인 가정 - 메인 화면으로 이동
-    navigation.navigate('Main');
+    // navigation.navigate('Main');
   };
 
   const handleSignUp = () => {
