@@ -207,10 +207,29 @@ const FriendsScreen: React.FC<FriendsScreenProps> = ({ navigation }) => {
     }
   };
 
-  const handleDeclineRequest = (requestId: string) => {
-    // 요청 거절 로직 (백엔드 연동 필요)
-    setFriendRequests(friendRequests.filter((r) => r.id !== requestId));
-    Alert.alert('알림', '친구 요청을 거절했습니다.');
+  const handleDeclineRequest = async (requestId: string) => {
+    const request = friendRequests.find(r => r.id === requestId);
+    if (!request) return;
+
+    try {
+      const token = await AsyncStorage.getItem('jwt');
+      // DELETE /friends?name={name}
+      await API.delete(
+        '/friends',
+        {
+          headers: { Authorization: token! },
+          params: { name: request.name },
+        }
+      );
+      // UI에서만 제거하지 말고, 백엔드에서도 삭제가 완료된 이후에 로컬 상태 갱신
+      setFriendRequests(prev =>
+        prev.filter(r => r.id !== requestId)
+      );
+      Alert.alert('알림', `${request.name}님의 친구 요청을 거절했습니다.`);
+    } catch (e) {
+      console.error('친구 요청 거절 에러', e);
+      Alert.alert('오류', '요청 거절에 실패했습니다.');
+    }
   };
 
   const renderFriendItem = ({ item }: { item: Friend }) => (
