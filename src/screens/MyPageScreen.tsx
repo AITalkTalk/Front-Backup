@@ -33,7 +33,7 @@ const MyPageScreen: React.FC<MyPageScreenProps> = ({ navigation }) => {
   const [loadingInfo, setLoadingInfo] = useState(true);
   const [parentCode, setParentCode] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedInterests, setSelectedInterests] = useState<string[]>(['과학', '미술']);
+  const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   
   const interestOptions = ['학업', '친구', '건강', '가정'];
   // **마운트 시 /info 호출**
