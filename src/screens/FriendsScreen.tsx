@@ -193,20 +193,39 @@ const FriendsScreen: React.FC<FriendsScreenProps> = ({ navigation }) => {
   };
   
 
-  const handleAcceptRequest = (requestId: string) => {
-    const request = friendRequests.find((r) => r.id === requestId);
-    if (request) {
-      // 친구 추가 로직 (백엔드 연동 필요)
-      setFriends([
-        ...friends,
-        { id: request.id, name: request.name, quizScore: 0 },
-      ]);
-      // 요청 목록에서 제거
-      setFriendRequests(friendRequests.filter((r) => r.id !== requestId));
-      Alert.alert('성공', `${request.name}님의 친구 요청을 수락했습니다.`);
+  const handleAcceptRequest = async (requestId: string) => {
+    const request = friendRequests.find(r => r.id === requestId);
+    if (!request) return;
+  
+    try {
+      const token = await AsyncStorage.getItem('jwt');
+      // PATCH /friends/approve?name={name}
+      const res = await API.patch(
+        '/friends/approve',
+        {}, // body 없으므로 빈 객체
+        {
+          headers: { Authorization: token! },
+          params: { name: request.name },
+        }
+      );
+      if (res.status === 200) {
+        // 1) 로컬 친구 리스트에 추가
+        setFriends(prev => [
+          ...prev,
+          { id: request.id, name: request.name, quizScore: 0 }
+        ]);
+        // 2) 친구 요청 리스트에서 제거
+        setFriendRequests(prev => prev.filter(r => r.id !== requestId));
+        Alert.alert('성공', `${request.name}님의 친구 요청을 수락했습니다.`);
+      } else {
+        Alert.alert('오류', res.data.message || '친구 요청 수락에 실패했습니다.');
+      }
+    } catch (e) {
+      console.error('친구 요청 수락 에러', e);
+      Alert.alert('오류', '친구 요청 수락 중 문제가 발생했습니다.');
     }
   };
-
+  
   const handleDeclineRequest = async (requestId: string) => {
     const request = friendRequests.find(r => r.id === requestId);
     if (!request) return;
