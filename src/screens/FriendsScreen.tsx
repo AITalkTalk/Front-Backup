@@ -30,11 +30,18 @@ interface FriendRequest {
   type: 'sent' | 'received';
 }
 
+interface SearchResult {
+  id: string;
+  name: string;
+  age: number;
+}
+
 const FriendsScreen: React.FC<FriendsScreenProps> = ({ navigation }) => {
   const [searchText, setSearchText] = useState('');
   const [activeTab, setActiveTab] = useState<'friends' | 'requests'>('friends');
   const [friends, setFriends] = useState<Friend[]>([]);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
+  const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
 
   // 마운트 시 친구 목록 불러오기
   useEffect(() => {
@@ -85,42 +92,106 @@ const FriendsScreen: React.FC<FriendsScreenProps> = ({ navigation }) => {
      loadRequests();
    }, []);
   
-  const handleSearch = () => {
-    if (searchText.trim() === '') {
+  // const handleSearch = () => {
+  //   if (searchText.trim() === '') {
+  //     Alert.alert('알림', '검색할 아이디를 입력해주세요.');
+  //     return;
+  //   }
+
+
+  //   // 검색 로직 (백엔드 연동 필요)
+  //   // 여기서는 간단히 랜덤으로 사용자를 찾았다고 가정
+  //   if (Math.random() > 0.5) {
+  //     Alert.alert(
+  //       '사용자 찾음',
+  //       `"${searchText}" 사용자를 찾았습니다. 친구 요청을 보내시겠습니까?`,
+  //       [
+  //         {
+  //           text: '취소',
+  //           style: 'cancel',
+  //         },
+  //         {
+  //           text: '요청 보내기',
+  //           onPress: () => {
+  //             // 친구 요청 보내기 로직 (백엔드 연동 필요)
+  //             setFriendRequests([
+  //               ...friendRequests,
+  //               { id: Date.now().toString(), name: searchText, type: 'sent' },
+  //             ]);
+  //             setSearchText('');
+  //             Alert.alert('성공', '친구 요청을 보냈습니다.');
+  //           },
+  //         },
+  //       ]
+  //     );
+  //   } else {
+  //     Alert.alert('알림', `"${searchText}" 사용자를 찾을 수 없습니다.`);
+  //   }
+  // };
+
+  // 검색 버튼 눌렀을 때
+  const handleSearch = async () => {
+    if (!searchText.trim()) {
       Alert.alert('알림', '검색할 아이디를 입력해주세요.');
       return;
     }
-
-
-    // 검색 로직 (백엔드 연동 필요)
-    // 여기서는 간단히 랜덤으로 사용자를 찾았다고 가정
-    if (Math.random() > 0.5) {
-      Alert.alert(
-        '사용자 찾음',
-        `"${searchText}" 사용자를 찾았습니다. 친구 요청을 보내시겠습니까?`,
-        [
-          {
-            text: '취소',
-            style: 'cancel',
-          },
-          {
-            text: '요청 보내기',
-            onPress: () => {
-              // 친구 요청 보내기 로직 (백엔드 연동 필요)
-              setFriendRequests([
-                ...friendRequests,
-                { id: Date.now().toString(), name: searchText, type: 'sent' },
-              ]);
-              setSearchText('');
-              Alert.alert('성공', '친구 요청을 보냈습니다.');
-            },
-          },
-        ]
+    try {
+      const token = await AsyncStorage.getItem('jwt');
+      const res = await API.get<{ data: SearchResult[] }>(
+        `/friends/requests/${encodeURIComponent(searchText)}`,
+        { headers: { Authorization: token! } }
       );
-    } else {
-      Alert.alert('알림', `"${searchText}" 사용자를 찾을 수 없습니다.`);
+      const found = res.data.data[0] ?? null;
+      if (found) {
+        setSearchResult(found);
+      } else {
+        Alert.alert('알림', `"${searchText}" 사용자를 찾을 수 없습니다.`);
+        setSearchResult(null);
+      }
+    } catch (e) {
+      console.error(e);
+      Alert.alert('오류', '검색 중 문제가 발생했습니다.');
     }
   };
+
+  // 실제로 친구 요청 보내기
+  const sendFriendRequest = async () => {
+    if (!searchResult) return;
+
+    // 이미 보낸 요청이 있으면 early return
+    if (friendRequests.some(r => r.name === searchResult.name && r.type === 'sent')) {
+      Alert.alert('알림', '이미 친구 요청을 보냈습니다.');
+      return;
+    }
+    try {
+      const token = await AsyncStorage.getItem('jwt');
+      const res = await API.post(
+               '/friends/requests',
+               {}, // 바디가 없으므로 빈 객체
+               {
+                 headers: { Authorization: token! },
+                 params: { name: searchResult.name },  // 쿼리 파라미터로 전달
+               }
+             );
+        
+             if (res.status === 200) {
+              // 이제야 로컬 상태 업데이트
+              setFriendRequests(prev => [
+                ...prev,
+                { id: searchResult.id, name: searchResult.name, type: 'sent' }
+              ]);
+              setSearchResult(null);
+              setActiveTab('requests');
+              Alert.alert('성공', `${searchResult.name}님에게 친구 요청을 보냈습니다.`);
+            } else {
+              Alert.alert('오류', res.data.message || '친구 요청에 실패했습니다.');
+            }
+    } catch (e) {
+      console.error(e);
+      Alert.alert('오류', '친구 요청을 보내는 데 실패했습니다.');
+    }
+  };
+  
 
   const handleAcceptRequest = (requestId: string) => {
     const request = friendRequests.find((r) => r.id === requestId);
@@ -162,7 +233,7 @@ const FriendsScreen: React.FC<FriendsScreenProps> = ({ navigation }) => {
       <View style={styles.friendInfo}>
         <Text style={styles.friendName}>{item.name}</Text>
         <Text style={styles.requestType}>
-          {item.type === 'received' ? '요청을 보냈습니다' : '요청을 받았습니다'}
+          {item.type === 'received' ? '요청을 받았습니다' : '요청을 보냈습니다'}
         </Text>
       </View>
       {item.type === 'received' ? (
@@ -208,6 +279,19 @@ const FriendsScreen: React.FC<FriendsScreenProps> = ({ navigation }) => {
             <Text style={styles.searchButtonText}>🔍</Text>
           </TouchableOpacity>
         </View>
+
+        {/* 검색 결과가 있으면 */}
+      {searchResult && (
+        <View style={styles.searchResultContainer}>
+          <Text>{searchResult.name} ({searchResult.age}세) 님을 찾았습니다.</Text>
+          <TouchableOpacity 
+            style={styles.sendRequestButton}
+            onPress={sendFriendRequest}
+          >
+            <Text style={styles.sendRequestText}>친구 요청 보내기</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
         <View style={styles.tabsContainer}>
           <TouchableOpacity
@@ -272,6 +356,31 @@ const FriendsScreen: React.FC<FriendsScreenProps> = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  // 검색 결과 컨테이너
+  searchResultContainer: {
+      padding: 15,
+      backgroundColor: '#fff',
+      margin: 15,
+      borderRadius: 10,
+      alignItems: 'center',
+    },
+  
+    // 친구 요청 보내기 버튼
+    sendRequestButton: {
+      marginTop: 10,
+      backgroundColor: '#6B7C1C',
+      paddingVertical: 10,
+      paddingHorizontal: 20,
+      borderRadius: 20,
+    },
+  
+    // 버튼 텍스트
+    sendRequestText: {
+      color: '#fff',
+      fontSize: 16,
+      fontWeight: 'bold',
+    },
+  
   container: {
     flex: 1,
     backgroundColor: '#DAE6DD',
