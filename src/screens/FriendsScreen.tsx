@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import Header from '../components/Header';
 import BottomNavigation from '../components/BottomNavigation';
+import API from '../api/axios';   // axios 인스턴스
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface FriendsScreenProps {
   navigation: any;
@@ -31,22 +33,64 @@ interface FriendRequest {
 const FriendsScreen: React.FC<FriendsScreenProps> = ({ navigation }) => {
   const [searchText, setSearchText] = useState('');
   const [activeTab, setActiveTab] = useState<'friends' | 'requests'>('friends');
-  const [friends, setFriends] = useState<Friend[]>([
-    { id: '1', name: '김철수', quizScore: 85 },
-    { id: '2', name: '박영희', quizScore: 92 },
-    { id: '3', name: '이민준', quizScore: 78 },
-  ]);
-  
-  const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([
-    { id: '4', name: '정수진', type: 'received' },
-    { id: '5', name: '한지민', type: 'sent' },
-  ]);
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
 
+  // 마운트 시 친구 목록 불러오기
+  useEffect(() => {
+    const loadFriends = async () => {
+      try {
+        const token = await AsyncStorage.getItem('jwt');
+        const res = await API.get('/friends', { headers: { Authorization: token } });
+        // 예: res.data.data === ['김철수','박영희',...]
+        const names: string[] = res.data.data;
+        const list: Friend[] = names.map((name, idx) => ({
+          id: name,          // 또는 idx.toString() 
+          name,
+          quizScore: 0,      // 아직 점수 API 없으므로 0으로 초기화
+        }));
+        setFriends(list);
+      } catch (err) {
+        console.error('친구 목록 조회 에러', err);
+        Alert.alert('오류', '친구 목록을 불러오지 못했습니다.');
+      }
+    };
+    loadFriends();
+  }, []);
+
+  // 친구 요청 목록 불러오기
+  useEffect(() => {
+     const loadRequests = async () => {
+       try {
+         const token = await AsyncStorage.getItem('jwt');
+         const res = await API.get('/friends/requests', { headers: { Authorization: token! } });
+         console.log('▶ /friends/requests payload:', res.data);
+         // 서버에서 ['친구 요청이 없습니다'] 일 때만 이 메시지 하나를 걸러냅니다.
+          const raw: string[] = res.data.data;
+          const validNames = raw.filter(name => name !== '친구 요청이 없습니다');
+          
+          // 실제 요청이 남아있는 이름들로만 리스트 생성
+          const list: FriendRequest[] = validNames.map((name, idx) => ({
+            id: idx.toString(),
+            name,
+            type: 'received',
+          }));
+          
+         setFriendRequests(list);
+       } catch (err) {
+         console.error('친구 요청 조회 에러', err);
+         Alert.alert('오류', '친구 요청 목록을 불러오지 못했습니다.');
+       }
+     };
+     loadRequests();
+   }, []);
+  
   const handleSearch = () => {
     if (searchText.trim() === '') {
       Alert.alert('알림', '검색할 아이디를 입력해주세요.');
       return;
     }
+
 
     // 검색 로직 (백엔드 연동 필요)
     // 여기서는 간단히 랜덤으로 사용자를 찾았다고 가정
