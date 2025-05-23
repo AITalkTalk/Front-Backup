@@ -585,6 +585,7 @@ const MyPageScreen: React.FC<MyPageScreenProps> = ({ navigation }) => {
     (async () => {
       try {
         const token = await AsyncStorage.getItem('jwt');
+        console.log(token);
         const res = await API.get('/info', { headers: { Authorization: token } });
         const info: UserInfo = res.data.data;
         setUserInfo(info);
