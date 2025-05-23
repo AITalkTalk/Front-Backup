@@ -605,6 +605,23 @@ const MyPageScreen: React.FC<MyPageScreenProps> = ({ navigation }) => {
     })();
   }, []);
 
+    const handleLogout = () => {
+    Alert.alert(
+      '로그아웃',
+      '정말 로그아웃 하시겠습니까?',
+      [
+        {
+          text: '취소',
+          style: 'cancel',
+        },
+        {
+          text: '확인',
+          onPress: () => navigation.navigate('Login'),
+        },
+      ]
+    );
+  };
+
   const toggleInterest = (i: string) => {
     setSelectedInterests(prev =>
       prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i]
@@ -714,6 +731,14 @@ const MyPageScreen: React.FC<MyPageScreenProps> = ({ navigation }) => {
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
         </View>
+        <View style={styles.menuSection}>
+           <TouchableOpacity style={[styles.menuItem, styles.logoutButton]} onPress={handleLogout}>
+             <Text style={styles.menuLeft}>
+               <Text style={[styles.menuIcon, styles.logoutIcon]}>🚪</Text>
+               <Text style={[styles.menuText, styles.logoutText]}>로그아웃</Text>
+             </Text>
+           </TouchableOpacity>
+         </View>
         {/* ... 나머지 메뉴 · 통계 섹션은 기존 코드 유지 ... */}
       </ScrollView>
 
@@ -954,7 +979,15 @@ const styles = StyleSheet.create({
     menuSection: {
       marginBottom: 30,
     },
-   
+   logoutButton: {
+    marginTop: 20,
+  },
+  logoutIcon: {
+    color: '#FF3B30',
+  },
+  logoutText: {
+    color: '#FF3B30',
+  },
 
   // ... 나머지 스타일 (메뉴, 통계 등) 동일하게 가져오시면 됩니다 ...
 });
