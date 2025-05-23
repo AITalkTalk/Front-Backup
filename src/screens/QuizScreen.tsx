@@ -500,12 +500,43 @@ const QuizScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
 
   const currentQuiz = quizzes[currentIndex];
 
-  const handleOptionSelect = (i: number) => {
+  // const handleOptionSelect = (i: number) => {
+  //   if (isAnswered) return;
+  //   setSelectedOption(i);
+  //   setIsAnswered(true);
+  //   if (i === currentQuiz.correctAnswer) {
+  //     setScore(s => s + 1);
+  //   }
+  // };
+
+  const handleOptionSelect = async (i: number) => {
     if (isAnswered) return;
+  
     setSelectedOption(i);
     setIsAnswered(true);
-    if (i === currentQuiz.correctAnswer) {
+  
+    const isCorrect = i === currentQuiz.correctAnswer;
+    if (isCorrect) {
       setScore(s => s + 1);
+  
+      // 정답 처리 API 호출
+      try {
+        const token = await AsyncStorage.getItem('jwt');
+        await API.patch(
+          '/quiz/solve',
+          {}, // 바디는 필요 없고 queryParam 으로 전달
+          {
+            headers: { Authorization: token! },
+            params: { quizId: currentQuiz.id },
+          }
+        );
+        console.log('정답 처리 성공');
+        // (필요하면 성공 시 추가 UI 처리)
+      } catch (e) {
+        console.error('정답 처리 실패', e);
+        // 실패해도 UX 방해하지 않도록 Alert 정도만 띄워줍니다
+        Alert.alert('알림', '정답 처리에 실패했습니다.');
+      }
     }
   };
 
