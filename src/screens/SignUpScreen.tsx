@@ -24,6 +24,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
+  const [secret, setSecret] = useState('');
   const [interests, setInterests] = useState<string[]>([]);
 
   const interestOptions = ['학업', '친구', '건강', '가정'];
@@ -38,7 +39,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
 
   const handleSignUp = async () => {
     // 기본 유효성 검사
-    if (id.trim() === '' || password.trim() === '' || name.trim() === '' || age.trim() === '') {
+    if (id.trim() === '' || password.trim() === '' || name.trim() === '' || age.trim() === '' || secret.trim() === '') {
       Alert.alert('경고', '모든 필수 항목을 입력해주세요.');
       return;
     }
@@ -57,6 +58,10 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
       const res = await API.post('/sign-up', {
         id,
         password,
+        name, 
+        age: parseInt(age, 10),
+        secret,
+        interest: interests.join(','),
       });
       // 201 or 200 으로 응답 돌아오면 성공 처리
       if (res.status === 201 || res.status === 200) {
@@ -131,6 +136,15 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
             value={age}
             onChangeText={setAge}
             keyboardType="numeric"
+          />
+
+          <Text style={styles.label}>대화 확인용 비밀번호</Text>
+         <TextInput
+            style={styles.input}
+            placeholder="비밀번호를 입력하세요"
+            value={secret}
+            onChangeText={setSecret}
+            secureTextEntry
           />
           
           <Text style={styles.label}>관심 분야 (1개 이상 선택)</Text>
