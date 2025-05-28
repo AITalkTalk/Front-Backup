@@ -122,8 +122,11 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ navigation, current
 
 const styles = StyleSheet.create({
   bottomNavigationContainer: {
-    position: 'relative',
-    height: 90,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 72,
   },
   bottomNavigation: {
     backgroundColor: '#6B7C1C',

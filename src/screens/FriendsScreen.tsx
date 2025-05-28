@@ -91,43 +91,6 @@ const FriendsScreen: React.FC<FriendsScreenProps> = ({ navigation }) => {
      };
      loadRequests();
    }, []);
-  
-  // const handleSearch = () => {
-  //   if (searchText.trim() === '') {
-  //     Alert.alert('알림', '검색할 아이디를 입력해주세요.');
-  //     return;
-  //   }
-
-
-  //   // 검색 로직 (백엔드 연동 필요)
-  //   // 여기서는 간단히 랜덤으로 사용자를 찾았다고 가정
-  //   if (Math.random() > 0.5) {
-  //     Alert.alert(
-  //       '사용자 찾음',
-  //       `"${searchText}" 사용자를 찾았습니다. 친구 요청을 보내시겠습니까?`,
-  //       [
-  //         {
-  //           text: '취소',
-  //           style: 'cancel',
-  //         },
-  //         {
-  //           text: '요청 보내기',
-  //           onPress: () => {
-  //             // 친구 요청 보내기 로직 (백엔드 연동 필요)
-  //             setFriendRequests([
-  //               ...friendRequests,
-  //               { id: Date.now().toString(), name: searchText, type: 'sent' },
-  //             ]);
-  //             setSearchText('');
-  //             Alert.alert('성공', '친구 요청을 보냈습니다.');
-  //           },
-  //         },
-  //       ]
-  //     );
-  //   } else {
-  //     Alert.alert('알림', `"${searchText}" 사용자를 찾을 수 없습니다.`);
-  //   }
-  // };
 
   // 검색 버튼 눌렀을 때
   const handleSearch = async () => {
@@ -425,6 +388,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    paddingBottom: 72,  // 바텀 내비게이션 높이만큼 패딩 추가
   },
   searchContainer: {
     flexDirection: 'row',
