@@ -10,9 +10,16 @@ import {
 } from 'react-native';
 import Header from '../components/Header';
 import BottomNavigation from '../components/BottomNavigation';
+import API from '../api/axios';         // axios 인스턴스
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface RankingScreenProps {
   navigation: any;
+}
+
+interface FriendRank {
+  name: string;
+  point: number;
 }
 
 interface User {
@@ -22,31 +29,57 @@ interface User {
   rank?: number;
 }
 
-const RankingScreen: React.FC<RankingScreenProps> = ({ navigation }) => {
-  const [rankingData, setRankingData] = useState<User[]>([
-    { id: '1', name: '김철수', quizScore: 950 },
-    { id: '2', name: '박영희', quizScore: 920 },
-    { id: '3', name: '이민준', quizScore: 870 },
-    { id: '4', name: '정수진', quizScore: 850 },
-    { id: '5', name: '한지민', quizScore: 820 },
-    { id: '6', name: '최재현', quizScore: 780 },
-    { id: '7', name: '장서연', quizScore: 750 },
-    { id: '8', name: '윤도윤', quizScore: 720 },
-    { id: '9', name: '강하늘', quizScore: 700 },
-    { id: '10', name: '조은별', quizScore: 650 },
-  ]);
+// const RankingScreen: React.FC<RankingScreenProps> = ({ navigation }) => {
+//   const [rankingData, setRankingData] = useState<User[]>([
+//     { id: '1', name: '김철수', quizScore: 950 },
+//     { id: '2', name: '박영희', quizScore: 920 },
+//     { id: '3', name: '이민준', quizScore: 870 },
+//     { id: '4', name: '정수진', quizScore: 850 },
+//     { id: '5', name: '한지민', quizScore: 820 },
+//     { id: '6', name: '최재현', quizScore: 780 },
+//     { id: '7', name: '장서연', quizScore: 750 },
+//     { id: '8', name: '윤도윤', quizScore: 720 },
+//     { id: '9', name: '강하늘', quizScore: 700 },
+//     { id: '10', name: '조은별', quizScore: 650 },
+//   ]);
+const RankingScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
+  const [rankingData, setRankingData] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 점수에 따라 내림차순 정렬 후 랭킹 할당
-    const sortedRanking = [...rankingData]
-      .sort((a, b) => b.quizScore - a.quizScore)
-      .map((user, index) => ({
-        ...user,
-        rank: index + 1,
+    (async () => {
+      try {
+        const token = await AsyncStorage.getItem('jwt');
+        const res = await API.get<{
+          status: number;
+          message: string;
+          data: FriendRank[];
+        }>('/friends/rank', {
+          headers: { Authorization: token! },
+        });
+    // 1) API에서 받은 data 배열
+    const raw: FriendRank[] = res.data.data;
+
+    // 2) point 내림차순 정렬
+    const sorted = raw
+      .slice()
+      .sort((a, b) => b.point - a.point)
+      .map((u, idx) => ({
+        id: `${idx}`,        // keyExtractor 용
+        name: u.name,
+        quizScore: u.point,
+        rank: idx + 1,
       }));
-    
-    setRankingData(sortedRanking);
-  }, []);
+
+    setRankingData(sorted);
+  } catch (e) {
+    console.error('랭킹 로드 에러', e);
+    // 실패 시 사용자에게 알려주어도 좋습니다.
+  } finally {
+    setLoading(false);
+  }
+})();
+}, []);
 
   const renderRankItem = ({ item, index }: { item: User; index: number }) => {
     // 상위 3위까지는 특별한 스타일 적용
