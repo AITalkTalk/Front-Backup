@@ -177,38 +177,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ navigation }) => {
     };
   }, [hasVoiceInput]);
 
-  // const handleSendMessage = (text?: string) => {
-  //   const messageText = text || inputText;
-  //   if (messageText.trim() === '') return;
-
-  //   const newUserMessage: Message = {
-  //     id: Date.now().toString(),
-  //     text: messageText,
-  //     sender: 'user',
-  //     timestamp: new Date(),
-  //   };
-
-  //   setMessages([...messages, newUserMessage]);
-  //   setInputText('');
-  //   setVoiceText('');
-  //   setHasVoiceInput(false);
-  //   setShowVoiceInput(false);
-  //   setIsFallback(false);
-
-  //   // AI 응답 시뮬레이션 (실제로는 백엔드 API 호출 필요)
-  //   setTimeout(() => {
-  //     const randomResponse = aiResponses[Math.floor(Math.random() * aiResponses.length)];
-  //     const newAiMessage: Message = {
-  //       id: (Date.now() + 1).toString(),
-  //       text: randomResponse,
-  //       sender: 'ai',
-  //       timestamp: new Date(),
-  //     };
-  //     setMessages(prev => [...prev, newAiMessage]);
-  //     Tts.speak(randomResponse);
-  //   }, 1000);
-  // };
-
   const handleSendMessage = async (overrideText?: string) => {
     const messageText = overrideText ?? inputText.trim();
     if (!messageText) return;

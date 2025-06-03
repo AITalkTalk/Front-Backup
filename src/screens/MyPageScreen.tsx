@@ -707,7 +707,7 @@ const MyPageScreen: React.FC<MyPageScreenProps> = ({ navigation }) => {
           
           <TouchableOpacity 
             style={styles.menuItem}
-            onPress={() => setShowParentModal(true)}
+            onPress={() => navigation.navigate('ChatSummary')}
           >
             <Text style={styles.menuLeft}>
               <Text style={styles.menuIcon}>💬</Text>
