@@ -573,6 +573,7 @@ const MyPageScreen: React.FC<MyPageScreenProps> = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [showParentModal, setShowParentModal] = useState(false);
  const [showEditModal, setShowEditModal] = useState(false);
+ const [parentCode, setParentCode] = useState('');
   // 수정 모달용 상태
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [name, setName] = useState('');
@@ -589,6 +590,7 @@ const MyPageScreen: React.FC<MyPageScreenProps> = ({ navigation }) => {
         const res = await API.get('/info', { headers: { Authorization: token } });
         const info: UserInfo = res.data.data;
         setUserInfo(info);
+        console.log(info);
 
         // 모달 초기값 세팅
         setName(info.name);
@@ -628,6 +630,34 @@ const MyPageScreen: React.FC<MyPageScreenProps> = ({ navigation }) => {
       prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i]
     );
   };
+
+  const checkParentCode = async () => {
+    try {
+      const token = await AsyncStorage.getItem('jwt');
+      const res = await API.post(
+        `/secret?secret=${encodeURIComponent(parentCode.trim())}`,
+        {},
+        { headers: { Authorization: token || '' } }
+      );
+      console.log('응답:', res.data);
+  
+      if (res.data.status === 200) {
+        setShowParentModal(false);
+        setParentCode('');
+        navigation.navigate('ChatSummary');
+      } else {
+        Alert.alert('오류', res.data.message || '비밀키가 올바르지 않습니다.');
+        setShowParentModal(false);
+        setParentCode('');
+      }
+    } catch (err) {
+      console.error(err);
+      Alert.alert('오류', '비밀키 인증 중 오류가 발생했습니다.');
+      setShowParentModal(false);
+      setParentCode('');
+    }
+  };
+  
 
   // **회원정보 변경 -> POST /changeinfo**
   const saveProfile = async () => {
@@ -707,7 +737,7 @@ const MyPageScreen: React.FC<MyPageScreenProps> = ({ navigation }) => {
           
           <TouchableOpacity 
             style={styles.menuItem}
-            onPress={() => navigation.navigate('ChatSummary')}
+            onPress={() => setShowParentModal(true)}
           >
             <Text style={styles.menuLeft}>
               <Text style={styles.menuIcon}>💬</Text>
@@ -715,6 +745,44 @@ const MyPageScreen: React.FC<MyPageScreenProps> = ({ navigation }) => {
             </Text>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
+          <Modal
+            visible={showParentModal}
+            transparent={true}
+            animationType="fade"
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContainer}>
+                <Text style={styles.modalTitle}>비밀키 확인</Text>
+                <Text style={styles.modalDescription}>
+                  대화 내용을 보기 위해 비밀키를 입력해주세요.
+                </Text>
+                <TextInput
+                  style={styles.codeInput}
+                  placeholder="비밀키 입력"
+                  value={parentCode}
+                  onChangeText={setParentCode}
+                  secureTextEntry
+                />
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.cancelButton]}
+                    onPress={() => {
+                      setShowParentModal(false);
+                      setParentCode('');
+                    }}
+                  >
+                    <Text style={styles.cancelButtonText}>취소</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.confirmButton]}
+                    onPress={checkParentCode}
+                  >
+                    <Text style={styles.confirmButtonText}>확인</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
           
           <TouchableOpacity style={styles.menuItem}>
             <Text style={styles.menuLeft}>
@@ -989,6 +1057,43 @@ const styles = StyleSheet.create({
   logoutText: {
     color: '#FF3B30',
   },
+  modalDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  codeInput: {
+    height: 45,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    marginBottom: 15,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modalButton: {
+    flex: 1,
+    height: 45,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  confirmButton: {
+    backgroundColor: '#6B7C1C',
+  },
+  cancelButtonText: {
+    color: '#333',
+    fontWeight: 'bold',
+  },
+  confirmButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  
 
   // ... 나머지 스타일 (메뉴, 통계 등) 동일하게 가져오시면 됩니다 ...
 });
