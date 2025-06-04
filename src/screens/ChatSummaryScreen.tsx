@@ -34,16 +34,17 @@ const ChatSummaryScreen: React.FC = () => {
     try {
       setLoading(true);
       const token = await AsyncStorage.getItem('jwt');
-
-      const res = await API.get(`/summary/month?year=${year}&month=${month}`, {
+  
+      const fullDate = `${year}-${String(month).padStart(2, '0')}-01`; // '2025-06-01' 형태
+      const res = await API.get(`/monthsummary?date=${fullDate}`, {
         headers: { Authorization: token || '' },
       });
-
+  
       const list: Summary[] = res.data.data;
-
+  
       const newMarked: { [date: string]: any } = {};
       const newMap: { [date: string]: Summary } = {};
-
+  
       list.forEach((item) => {
         newMarked[item.date] = {
           marked: true,
@@ -51,7 +52,7 @@ const ChatSummaryScreen: React.FC = () => {
         };
         newMap[item.date] = item;
       });
-
+  
       setMarkedDates(newMarked);
       setSummaryMap(newMap);
     } catch (e) {
@@ -61,6 +62,7 @@ const ChatSummaryScreen: React.FC = () => {
       setLoading(false);
     }
   };
+  
 
   // ✅ 날짜 클릭 시 해당 요약 표시
   const onDateSelected = (date: string) => {
