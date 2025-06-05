@@ -133,8 +133,16 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ navigation }) => {
     Voice.onSpeechResults = (e: any) => {
       console.log('음성 인식 결과:', e.value);
       if (e.value && e.value.length > 0) {
-        const recognizedText = e.value[0];
-        setVoiceText(recognizedText);
+        // 가장 긴 결과를 선택 (일반적으로 가장 정확한 결과임)
+        const recognizedText = e.value.reduce((longest: string, current: string) => 
+          current.length > longest.length ? current : longest
+        );
+        console.log('최종 인식된 텍스트:', recognizedText);
+        setVoiceText(prevText => {
+          // 이전 텍스트가 있으면 공백을 추가하여 연결
+          const newText = prevText ? `${prevText} ${recognizedText}` : recognizedText;
+          return newText;
+        });
         setHasVoiceInput(true);
         setIsFallback(false);
       }
@@ -143,7 +151,10 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ navigation }) => {
     Voice.onSpeechPartialResults = (e: any) => {
       console.log('음성 인식 부분 결과:', e.value);
       if (e.value && e.value.length > 0) {
-        const partialText = e.value[0];
+        // 가장 긴 부분 결과를 선택
+        const partialText = e.value.reduce((longest: string, current: string) => 
+          current.length > longest.length ? current : longest
+        );
         console.log('부분 인식 텍스트:', partialText);
         setVoiceText(partialText);
         setHasVoiceInput(!!partialText);
@@ -176,38 +187,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ navigation }) => {
       }
     };
   }, [hasVoiceInput]);
-
-  // const handleSendMessage = (text?: string) => {
-  //   const messageText = text || inputText;
-  //   if (messageText.trim() === '') return;
-
-  //   const newUserMessage: Message = {
-  //     id: Date.now().toString(),
-  //     text: messageText,
-  //     sender: 'user',
-  //     timestamp: new Date(),
-  //   };
-
-  //   setMessages([...messages, newUserMessage]);
-  //   setInputText('');
-  //   setVoiceText('');
-  //   setHasVoiceInput(false);
-  //   setShowVoiceInput(false);
-  //   setIsFallback(false);
-
-  //   // AI 응답 시뮬레이션 (실제로는 백엔드 API 호출 필요)
-  //   setTimeout(() => {
-  //     const randomResponse = aiResponses[Math.floor(Math.random() * aiResponses.length)];
-  //     const newAiMessage: Message = {
-  //       id: (Date.now() + 1).toString(),
-  //       text: randomResponse,
-  //       sender: 'ai',
-  //       timestamp: new Date(),
-  //     };
-  //     setMessages(prev => [...prev, newAiMessage]);
-  //     Tts.speak(randomResponse);
-  //   }, 1000);
-  // };
 
   const handleSendMessage = async (overrideText?: string) => {
     const messageText = overrideText ?? inputText.trim();
