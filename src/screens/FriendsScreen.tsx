@@ -221,7 +221,6 @@ const FriendsScreen: React.FC<FriendsScreenProps> = ({ navigation }) => {
       </View>
       <View style={styles.friendInfo}>
         <Text style={styles.friendName}>{item.name}</Text>
-        <Text style={styles.friendScore}>퀴즈 점수: {item.quizScore}</Text>
       </View>
     </View>
   );
