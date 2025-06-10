@@ -39,33 +39,6 @@ interface Message {
   timestamp: Date;
 }
 
-const aiResponses = [
-  '안녕하세요! 오늘 어떻게 지내셨나요?',
-  '오늘 학교에서 어떤 일이 있었나요?',
-  '그렇군요! 더 자세히 이야기해주세요.',
-  '정말 재미있었겠네요! 다른 이야기도 들려주세요.',
-  '오늘 가장 기억에 남는 일은 무엇인가요?',
-  '친구들과 뭐하고 놀았어요?',
-  '집에서는 무엇을 하며 시간을 보냈나요?',
-  '오늘 배운 새로운 것이 있다면 무엇인가요?',
-  '내일은 어떤 계획이 있나요?',
-  '궁금한 것이 있으면 언제든지 물어보세요!',
-];
-
-// 음성 인식 실패 시 백업용 텍스트들
-const fallbackSpeechTexts = [
-  '안녕하세요',
-  '오늘 날씨가 정말 좋아요',
-  '이번 주말에 친구들과 만날 예정이에요',
-  '영화 보러 갈까 생각 중이에요',
-  '새로운 취미를 찾고 있어요',
-  '요즘 공부하느라 바빠요',
-  '맛있는 음식점을 추천해주세요',
-  '내일 중요한 약속이 있어요',
-  '오늘 하루 정말 피곤했어요',
-  '이 앱 정말 좋네요!',
-];
-
 const { height } = Dimensions.get('window');
 
 const ChatScreen: React.FC<ChatScreenProps> = ({ navigation }) => {
@@ -165,7 +138,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ navigation }) => {
       
       // 에러 발생시 폴백 메커니즘 활성화
       if (!hasVoiceInput) {
-        useFallbackMechanism();
+        // useFallbackMechanism();
       }
     };
 
@@ -276,37 +249,37 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ navigation }) => {
   };
 
   // 폴백 메커니즘: 음성 인식 실패시 대체 텍스트 표시
-  const useFallbackMechanism = () => {
-    // 폴백 모드 활성화
-    setIsFallback(true);
+  // const useFallbackMechanism = () => {
+  //   // 폴백 모드 활성화
+  //   setIsFallback(true);
     
-    // 랜덤 텍스트 선택
-    const randomText = fallbackSpeechTexts[Math.floor(Math.random() * fallbackSpeechTexts.length)];
-    let currentIndex = 0;
+  //   // 랜덤 텍스트 선택
+  //   const randomText = fallbackSpeechTexts[Math.floor(Math.random() * fallbackSpeechTexts.length)];
+  //   let currentIndex = 0;
     
-    // 글자 하나씩 추가하는 시뮬레이션
-    const addCharacter = () => {
-      if (currentIndex <= randomText.length) {
-        const partialText = randomText.substring(0, currentIndex);
-        setVoiceText(partialText);
-        setHasVoiceInput(!!partialText);
-        currentIndex++;
+  //   // 글자 하나씩 추가하는 시뮬레이션
+  //   const addCharacter = () => {
+  //     if (currentIndex <= randomText.length) {
+  //       const partialText = randomText.substring(0, currentIndex);
+  //       setVoiceText(partialText);
+  //       setHasVoiceInput(!!partialText);
+  //       currentIndex++;
         
-        // 다음 글자 추가
-        simulationTimerRef.current = setTimeout(addCharacter, 100);
-      } else {
-        // 시뮬레이션 종료
-        setIsListening(false);
-        Alert.alert(
-          '음성 인식 안내',
-          '음성 인식이 원활하지 않아 예시 텍스트를 표시했습니다. 필요시 수정하거나 다시 시도해 주세요.'
-        );
-      }
-    };
+  //       // 다음 글자 추가
+  //       simulationTimerRef.current = setTimeout(addCharacter, 100);
+  //     } else {
+  //       // 시뮬레이션 종료
+  //       setIsListening(false);
+  //       Alert.alert(
+  //         '음성 인식 안내',
+  //         '음성 인식이 원활하지 않아 예시 텍스트를 표시했습니다. 필요시 수정하거나 다시 시도해 주세요.'
+  //       );
+  //     }
+  //   };
     
-    // 시뮬레이션 시작
-    addCharacter();
-  };
+  //   // 시뮬레이션 시작
+  //   addCharacter();
+  // };
 
   const startSpeechToText = async () => {
     try {
@@ -332,7 +305,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ navigation }) => {
         } catch (e) {
           console.error('음성 인식 지연 시작 오류:', e);
           setIsListening(false);
-          useFallbackMechanism();
+          // useFallbackMechanism();
         }
       }, 300);
     } catch (error) {
@@ -344,7 +317,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ navigation }) => {
         '음성 인식 오류',
         '음성 인식을 시작할 수 없습니다. 대체 모드로 전환합니다.'
       );
-      useFallbackMechanism();
+      // useFallbackMechanism();
     }
   };
 

@@ -25,21 +25,11 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [secret, setSecret] = useState('');
-  const [interests, setInterests] = useState<string[]>([]);
-
-  const interestOptions = ['학업', '친구', '건강', '가정'];
-
-  const toggleInterest = (interest: string) => {
-    if (interests.includes(interest)) {
-      setInterests(interests.filter(item => item !== interest));
-    } else {
-      setInterests([...interests, interest]);
-    }
-  };
+  const [interests, setInterests] = useState(''); // string으로 변경
 
   const handleSignUp = async () => {
     // 기본 유효성 검사
-    if (id.trim() === '' || password.trim() === '' || name.trim() === '' || age.trim() === '' || secret.trim() === '') {
+    if (id.trim() === '' || password.trim() === '' || name.trim() === '' || age.trim() === '' || secret.trim() === '' || interests.trim() === '') {
       Alert.alert('경고', '모든 필수 항목을 입력해주세요.');
       return;
     }
@@ -61,7 +51,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
         name, 
         age: parseInt(age, 10),
         secret,
-        interest: interests.join(','),
+        interest: interests, // string 그대로 전달
       });
       // 201 or 200 으로 응답 돌아오면 성공 처리
       if (res.status === 201 || res.status === 200) {
@@ -146,29 +136,14 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
             onChangeText={setSecret}
             secureTextEntry
           />
-          
-          <Text style={styles.label}>관심 분야 (1개 이상 선택)</Text>
-          <View style={styles.interestsContainer}>
-            {interestOptions.map((interest) => (
-              <TouchableOpacity
-                key={interest}
-                style={[
-                  styles.interestButton,
-                  interests.includes(interest) && styles.interestButtonSelected
-                ]}
-                onPress={() => toggleInterest(interest)}
-              >
-                <Text 
-                  style={[
-                    styles.interestButtonText,
-                    interests.includes(interest) && styles.interestButtonTextSelected
-                  ]}
-                >
-                  {interest}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+
+          <Text style={styles.label}>관심 분야</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="예: 학교 생활은 어떤지, 친구들과 잘 지내는지 등"
+            value={interests}
+            onChangeText={setInterests}
+          />
         </View>
         
         <TouchableOpacity style={styles.signUpButton} onPress={handleSignUp}>
