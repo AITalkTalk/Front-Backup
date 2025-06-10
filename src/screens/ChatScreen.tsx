@@ -138,11 +138,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ navigation }) => {
           current.length > longest.length ? current : longest
         );
         console.log('최종 인식된 텍스트:', recognizedText);
-        setVoiceText(prevText => {
-          // 이전 텍스트가 있으면 공백을 추가하여 연결
-          const newText = prevText ? `${prevText} ${recognizedText}` : recognizedText;
-          return newText;
-        });
+        // 최종 인식 결과로 텍스트를 완전히 대체
+        setVoiceText(recognizedText);
         setHasVoiceInput(true);
         setIsFallback(false);
       }
@@ -156,8 +153,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ navigation }) => {
           current.length > longest.length ? current : longest
         );
         console.log('부분 인식 텍스트:', partialText);
-        setVoiceText(partialText);
-        setHasVoiceInput(!!partialText);
+        
+        // 부분 인식 결과를 임시 표시
+        setVoiceText(`${partialText} (typing...)`);
       }
     };
 
