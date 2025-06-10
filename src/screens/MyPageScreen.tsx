@@ -28,7 +28,7 @@ interface MyPageScreenProps {
   navigation: any;
 }
 
-const interestOptions = ['학업', '친구', '건강', '가정'];
+// const interestOptions = ['학업', '친구', '건강', '가정'];
 
 const MyPageScreen: React.FC<MyPageScreenProps> = ({ navigation }) => {
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
@@ -36,12 +36,12 @@ const MyPageScreen: React.FC<MyPageScreenProps> = ({ navigation }) => {
   const [showParentModal, setShowParentModal] = useState(false);
  const [showEditModal, setShowEditModal] = useState(false);
  const [parentCode, setParentCode] = useState('');
+ const [interests, setInterests] = useState(''); // string으로 변경
   // 수정 모달용 상태
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [secret, setSecret] = useState('');
-  const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
 
   // 마운트 시 회원정보 조회
   useEffect(() => {
@@ -58,9 +58,7 @@ const MyPageScreen: React.FC<MyPageScreenProps> = ({ navigation }) => {
         setName(info.name);
         setAge(info.age.toString());
         setSecret(info.secret);
-        setSelectedInterests(
-          info.interest.split(',').map(s => s.trim()).filter(s => interestOptions.includes(s))
-        );
+        setInterests(info.interest);
       } catch (e) {
         console.error(e);
         Alert.alert('오류', '회원 정보를 불러올 수 없습니다.');
@@ -84,12 +82,6 @@ const MyPageScreen: React.FC<MyPageScreenProps> = ({ navigation }) => {
           onPress: () => navigation.navigate('Login'),
         },
       ]
-    );
-  };
-
-  const toggleInterest = (i: string) => {
-    setSelectedInterests(prev =>
-      prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i]
     );
   };
 
@@ -123,7 +115,7 @@ const MyPageScreen: React.FC<MyPageScreenProps> = ({ navigation }) => {
 
   // **회원정보 변경 -> POST /changeinfo**
   const saveProfile = async () => {
-    if (!name || !age || !secret || selectedInterests.length === 0) {
+    if (!name || !age || !secret || interests.trim() === '') {
       Alert.alert('경고', '모든 필드를 입력하고 관심 분야를 한 개 이상 선택하세요.');
       return;
     }
@@ -135,7 +127,7 @@ const MyPageScreen: React.FC<MyPageScreenProps> = ({ navigation }) => {
         age: parseInt(age, 10),
         point: userInfo?.point ?? 0,
         secret: secret.trim(),
-        interest: selectedInterests.join(','),
+        interest: interests.trim(),
       };
       const res = await API.post(
         '/changeinfo',
@@ -304,27 +296,12 @@ const MyPageScreen: React.FC<MyPageScreenProps> = ({ navigation }) => {
             />
 
             <Text style={styles.sectionTitle}>관심 분야</Text>
-            <View style={styles.interestsContainer}>
-              {interestOptions.map(opt => (
-                <TouchableOpacity
-                  key={opt}
-                  style={[
-                    styles.interestButton,
-                    selectedInterests.includes(opt) && styles.interestButtonSelected
-                  ]}
-                  onPress={() => toggleInterest(opt)}
-                >
-                  <Text
-                    style={[
-                      styles.interestButtonText,
-                      selectedInterests.includes(opt) && styles.interestButtonTextSelected
-                    ]}
-                  >
-                    {opt}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="예: 운동, 게임, 대화하기 등"
+              value={interests}
+              onChangeText={setInterests}
+            />
 
             <View style={styles.modalActions}>
               <TouchableOpacity
