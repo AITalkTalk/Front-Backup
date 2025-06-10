@@ -65,36 +65,78 @@ const ChatSummaryScreen: React.FC = () => {
   
 
   // ✅ 날짜 클릭 시 해당 요약 표시
-  const onDateSelected = (date: string) => {
-    const data = summaryMap[date];
-    if (data) {
-      setSummary(data);
-    } else {
+  // const onDateSelected = (date: string) => {
+  //   const data = summaryMap[date];
+  //   console.log(data);
+  //   if (data) {
+  //     setSummary(data);
+  //   } else {
+  //     setSummary({
+  //       date,
+  //       sentiment: '-',
+  //       chat: '(해당 날짜에 대화 기록이 없습니다.)',
+  //     });
+  //   }
+  
+  //   // ✅ 모든 날짜의 selected 제거 + 새 날짜만 selected 처리
+  //   const updatedMarked: { [date: string]: any } = {};
+  //   Object.keys(markedDates).forEach((d) => {
+  //     // 기존 마킹 유지 but selected 제거
+  //     updatedMarked[d] = {
+  //       ...markedDates[d],
+  //       selected: false,
+  //     };
+  //   });
+  
+  //   updatedMarked[date] = {
+  //     ...(markedDates[date] || {}),
+  //     selected: true,
+  //     selectedColor: '#6B7C1C',
+  //   };
+  
+  //   setMarkedDates(updatedMarked);
+  // };
+  const onDateSelected = async (date: string) => {
+    try {
+      setLoading(true);
+      const token = await AsyncStorage.getItem('jwt');
+      const res = await API.get(`/summary?date=${date}`, {
+        headers: { Authorization: token || '' },
+      });
+  
+      const data = res.data.data; // <- 서버에서 오는 실제 요약 데이터
+  
+      setSummary({
+        date: data.date,
+        sentiment: data.sentiment,
+        chat: data.chat,
+      });
+  
+    } catch (e) {
+      console.error(e);
       setSummary({
         date,
         sentiment: '-',
         chat: '(해당 날짜에 대화 기록이 없습니다.)',
       });
-    }
+    } finally {
+      // ✅ 선택한 날짜 하이라이트 처리
+      const updatedMarked: { [date: string]: any } = {};
+      Object.keys(markedDates).forEach((d) => {
+        updatedMarked[d] = { ...markedDates[d], selected: false };
+      });
   
-    // ✅ 모든 날짜의 selected 제거 + 새 날짜만 selected 처리
-    const updatedMarked: { [date: string]: any } = {};
-    Object.keys(markedDates).forEach((d) => {
-      // 기존 마킹 유지 but selected 제거
-      updatedMarked[d] = {
-        ...markedDates[d],
-        selected: false,
+      updatedMarked[date] = {
+        ...(markedDates[date] || {}),
+        selected: true,
+        selectedColor: '#6B7C1C',
       };
-    });
+      setMarkedDates(updatedMarked);
   
-    updatedMarked[date] = {
-      ...(markedDates[date] || {}),
-      selected: true,
-      selectedColor: '#6B7C1C',
-    };
-  
-    setMarkedDates(updatedMarked);
+      setLoading(false);
+    }
   };
+  
   
 
   return (
