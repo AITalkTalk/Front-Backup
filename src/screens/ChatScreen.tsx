@@ -18,7 +18,7 @@ import {
 import Header from '../components/Header';
 import BottomNavigation from '../components/BottomNavigation';
 import Voice from '@react-native-community/voice';
-import Tts from 'react-native-tts';
+import Tts from '../services/NaverClovaTTS';
 import API from '../api/axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
