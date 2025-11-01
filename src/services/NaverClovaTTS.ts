@@ -20,7 +20,9 @@ interface TTSConfig {
 }
 
 class NaverClovaTTS {
-  private static readonly BASE64_CHUNK_SIZE = 0x8000; // 32KB chunks for Base64 conversion
+  // 32KB 청크 크기: btoa() 함수의 성능과 메모리 효율을 고려한 최적 값
+  // 너무 크면 메모리 사용량이 증가하고, 너무 작으면 청크 처리 오버헤드 증가
+  private static readonly BASE64_CHUNK_SIZE = 0x8000;
   
   private clientId: string;
   private clientSecret: string;
@@ -215,13 +217,13 @@ class NaverClovaTTS {
     
     for (let i = 0; i < bytes.length; i += chunkSize) {
       const end = Math.min(i + chunkSize, bytes.length);
-      let chunkStr = '';
+      const charCodes: string[] = [];
       
-      // 청크를 작은 단위로 나누어 처리하여 call stack 오버플로우 방지
+      // 청크 내 각 바이트를 문자로 변환
       for (let j = i; j < end; j++) {
-        chunkStr += String.fromCharCode(bytes[j]);
+        charCodes.push(String.fromCharCode(bytes[j]));
       }
-      chunks.push(chunkStr);
+      chunks.push(charCodes.join(''));
     }
     
     return btoa(chunks.join(''));
