@@ -42,14 +42,18 @@ class GeminiTTS {
       volumeGainDb: 0.0,              // 보통 볼륨
     };
 
-    // TrackPlayer 초기화
-    this.setupPlayer();
+    // TrackPlayer는 필요할 때 초기화 (lazy initialization)
+    // 앱이 포어그라운드에 있을 때만 초기화 가능
   }
 
   /**
-   * TrackPlayer 초기화
+   * TrackPlayer 초기화 (lazy initialization)
    */
   private async setupPlayer(): Promise<void> {
+    if (this.isPlayerSetup) {
+      return;
+    }
+
     try {
       await TrackPlayer.setupPlayer();
       await TrackPlayer.updateOptions({
@@ -64,7 +68,8 @@ class GeminiTTS {
       console.log('TTS: TrackPlayer 초기화 완료');
     } catch (error) {
       console.error('TTS: TrackPlayer 초기화 오류:', error);
-      this.isPlayerSetup = true; // 이미 초기화되어 있을 수 있음
+      // 이미 초기화되어 있을 수 있음
+      this.isPlayerSetup = true;
     }
   }
 
