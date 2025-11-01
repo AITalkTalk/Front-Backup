@@ -25,6 +25,7 @@ class NaverClovaTTS {
   private apiUrl: string;
   private config: TTSConfig;
   private currentSound: Sound | null = null;
+  private currentFilePath: string | null = null;
 
   constructor() {
     // 환경 변수에서 API 키 가져오기
@@ -152,16 +153,13 @@ class NaverClovaTTS {
    */
   private async playAudio(audioData: ArrayBuffer): Promise<void> {
     try {
-      // 기존 사운드 중지
-      if (this.currentSound) {
-        this.currentSound.stop();
-        this.currentSound.release();
-        this.currentSound = null;
-      }
+      // 기존 사운드 중지 및 임시 파일 정리
+      await this.cleanup();
 
       // 임시 파일 경로 생성
       const fileName = `tts_${Date.now()}.mp3`;
       const filePath = `${RNFS.CachesDirectoryPath}/${fileName}`;
+      this.currentFilePath = filePath;
 
       // ArrayBuffer를 Base64로 변환
       const base64Audio = this.arrayBufferToBase64(audioData);
@@ -175,6 +173,8 @@ class NaverClovaTTS {
       this.currentSound = new Sound(filePath, '', (error) => {
         if (error) {
           console.error('TTS: 사운드 로드 실패:', error);
+          // 에러 발생 시 임시 파일 정리
+          this.cleanup();
           return;
         }
 
@@ -187,18 +187,13 @@ class NaverClovaTTS {
           }
 
           // 재생 완료 후 리소스 정리
-          this.currentSound?.release();
-          this.currentSound = null;
-
-          // 임시 파일 삭제
-          RNFS.unlink(filePath).catch((err) => {
-            console.warn('TTS: 임시 파일 삭제 실패:', err);
-          });
+          this.cleanup();
         });
       });
 
     } catch (error) {
       console.error('TTS: 오디오 재생 오류:', error);
+      await this.cleanup();
     }
   }
 
@@ -207,11 +202,38 @@ class NaverClovaTTS {
    */
   private arrayBufferToBase64(buffer: ArrayBuffer): string {
     const bytes = new Uint8Array(buffer);
-    let binary = '';
-    for (let i = 0; i < bytes.byteLength; i++) {
-      binary += String.fromCharCode(bytes[i]);
+    const chunks: string[] = [];
+    const chunkSize = 0x8000; // 32KB chunks to prevent call stack issues
+    
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      const chunk = bytes.subarray(i, i + chunkSize);
+      chunks.push(String.fromCharCode.apply(null, Array.from(chunk)));
     }
-    return btoa(binary);
+    
+    return btoa(chunks.join(''));
+  }
+
+  /**
+   * 리소스 정리 (사운드 중지 및 임시 파일 삭제)
+   */
+  private async cleanup(): Promise<void> {
+    // 사운드 리소스 해제
+    if (this.currentSound) {
+      this.currentSound.stop();
+      this.currentSound.release();
+      this.currentSound = null;
+    }
+
+    // 임시 파일 삭제
+    if (this.currentFilePath) {
+      try {
+        await RNFS.unlink(this.currentFilePath);
+        console.log('TTS: 임시 파일 삭제 완료');
+      } catch (err) {
+        console.warn('TTS: 임시 파일 삭제 실패:', err);
+      }
+      this.currentFilePath = null;
+    }
   }
 
   /**
@@ -219,12 +241,8 @@ class NaverClovaTTS {
    */
   async stop(): Promise<void> {
     try {
-      if (this.currentSound) {
-        console.log('TTS: 음성 재생 중지');
-        this.currentSound.stop();
-        this.currentSound.release();
-        this.currentSound = null;
-      }
+      console.log('TTS: 음성 재생 중지');
+      await this.cleanup();
     } catch (error) {
       console.error('TTS: 음성 중지 오류:', error);
     }
