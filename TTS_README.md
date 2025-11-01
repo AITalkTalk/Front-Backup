@@ -69,14 +69,14 @@ Tts.setConfig({ voiceName: 'ko-KR-Neural2-B' });
 
 ## 의존성
 
-- `react-native-sound`: 오디오 재생
+- `react-native-track-player`: 오디오 재생 (react-native-sound 대체, RN 0.79 호환)
 - `react-native-fs`: 임시 파일 저장
 - `react-native-config`: 환경 변수 관리
 - `react-native-base64`: Base64 인코딩
 
 ## 문제 해결
 
-### "Unable to resolve module react-native-sound" 오류
+### "Unable to resolve module" 오류
 
 이 오류가 발생하면 다음 단계를 시도하세요:
 
@@ -111,6 +111,24 @@ Tts.setConfig({ voiceName: 'ko-KR-Neural2-B' });
    # iOS
    npm run ios
    ```
+
+### TrackPlayer 서비스 설정 (Android)
+
+Android에서는 `index.js`에 TrackPlayer 서비스를 등록해야 합니다:
+
+```javascript
+import TrackPlayer from 'react-native-track-player';
+
+// 기존 AppRegistry 등록 후
+TrackPlayer.registerPlaybackService(() => require('./service'));
+```
+
+서비스 파일 `service.js` 생성:
+```javascript
+module.exports = async function() {
+    // 필요한 경우 여기에 설정 추가
+};
+```
 
 ## API 요금
 

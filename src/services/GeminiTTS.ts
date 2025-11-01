@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { Alert } from 'react-native';
 import Config from 'react-native-config';
-import Sound from 'react-native-sound';
+import TrackPlayer, { Capability, State } from 'react-native-track-player';
 import RNFS from 'react-native-fs';
 import base64 from 'react-native-base64';
 
@@ -24,9 +24,9 @@ class GeminiTTS {
   private apiKey: string;
   private apiUrl: string;
   private config: TTSConfig;
-  private currentSound: Sound | null = null;
   private currentFilePath: string | null = null;
   private isSpeaking: boolean = false;
+  private isPlayerSetup: boolean = false;
 
   constructor() {
     // 환경 변수에서 API 키 가져오기
@@ -42,8 +42,30 @@ class GeminiTTS {
       volumeGainDb: 0.0,              // 보통 볼륨
     };
 
-    // Sound 라이브러리 초기화
-    Sound.setCategory('Playback');
+    // TrackPlayer 초기화
+    this.setupPlayer();
+  }
+
+  /**
+   * TrackPlayer 초기화
+   */
+  private async setupPlayer(): Promise<void> {
+    try {
+      await TrackPlayer.setupPlayer();
+      await TrackPlayer.updateOptions({
+        capabilities: [
+          Capability.Play,
+          Capability.Pause,
+          Capability.Stop,
+        ],
+        compactCapabilities: [Capability.Play, Capability.Stop],
+      });
+      this.isPlayerSetup = true;
+      console.log('TTS: TrackPlayer 초기화 완료');
+    } catch (error) {
+      console.error('TTS: TrackPlayer 초기화 오류:', error);
+      this.isPlayerSetup = true; // 이미 초기화되어 있을 수 있음
+    }
   }
 
   /**
@@ -115,38 +137,13 @@ class GeminiTTS {
         return;
       }
 
+      // Player 설정 대기
+      if (!this.isPlayerSetup) {
+        await this.setupPlayer();
+      }
+
       console.log('TTS: 음성 생성 시작:', text.substring(0, 50));
 
-      // Google Gemini TTS API 호출
-      const response = await axios.post(
-        `${this.apiUrl}?key=${this.apiKey}`,
-        {
-          contents: [{
-            parts: [{
-              text: text
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 8192,
-          }
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        }
-      );
-
-      console.log('TTS: API 응답 수신 완료');
-
-      // Gemini API 응답에서 오디오 데이터 추출
-      // Note: Gemini 2.5 Flash는 텍스트 생성 모델이므로, 실제 TTS를 위해서는
-      // Google Cloud Text-to-Speech API를 사용해야 합니다.
-      // 여기서는 Gemini API의 응답을 TTS로 변환하는 방법을 구현합니다.
-      
       // Google Cloud Text-to-Speech API 호출
       await this.synthesizeSpeech(text);
 
@@ -238,52 +235,19 @@ class GeminiTTS {
 
       console.log('TTS: 오디오 파일 저장 완료:', filePath);
 
-      // Sound 객체 생성 및 재생
-      // basePath를 undefined로 전달하여 절대 경로 사용
-      this.currentSound = new Sound(filePath, undefined, (error) => {
-        if (error) {
-          console.error('TTS: 사운드 로드 실패:', error);
-          this.isSpeaking = false;
-          // 에러 발생 시 임시 파일 정리
-          this.cleanup().catch((err) => {
-            console.warn('TTS: cleanup 중 오류:', err);
-          });
-          return;
-        }
-
-        console.log('TTS: 오디오 재생 시작');
-        this.currentSound?.play((success) => {
-          if (success) {
-            console.log('TTS: 오디오 재생 완료');
-          } else {
-            console.error('TTS: 오디오 재생 실패');
-          }
-
-          this.isSpeaking = false;
-          // 재생 완료 후 리소스 정리
-          this.cleanup().catch((err) => {
-            console.warn('TTS: cleanup 중 오류:', err);
-          });
-        });
+      // TrackPlayer에 트랙 추가 및 재생
+      await TrackPlayer.reset();
+      await TrackPlayer.add({
+        url: `file://${filePath}`,
+        title: 'TTS Audio',
+        artist: 'Google TTS',
       });
 
-    } catch (error) {
-      console.error('TTS: 오디오 재생 오류:', error);
-      this.isSpeaking = false;
-      await this.cleanup();
-    }
-  }
+      console.log('TTS: 오디오 재생 시작');
+      await TrackPlayer.play();
 
-  /**
-   * 음성 데이터 재생 (ArrayBuffer 버전 - 호환성 유지)
-   */
-  private async playAudio(audioData: ArrayBuffer): Promise<void> {
-    try {
-      // ArrayBuffer를 Base64로 변환
-      const base64Audio = this.arrayBufferToBase64(audioData);
-      
-      // Base64 오디오 재생
-      await this.playAudioFromBase64(base64Audio);
+      // 재생 완료 대기
+      this.waitForPlaybackEnd();
 
     } catch (error) {
       console.error('TTS: 오디오 재생 오류:', error);
@@ -293,20 +257,25 @@ class GeminiTTS {
   }
 
   /**
-   * ArrayBuffer를 Base64로 변환
-   * React Native 환경에서 동작하는 Base64 인코딩
+   * 재생 완료 대기
    */
-  private arrayBufferToBase64(buffer: ArrayBuffer): string {
-    const bytes = new Uint8Array(buffer);
-    const charCodes: string[] = [];
-    
-    // 바이너리 데이터를 문자열 배열로 변환
-    for (let i = 0; i < bytes.length; i++) {
-      charCodes.push(String.fromCharCode(bytes[i]));
-    }
-    
-    // react-native-base64를 사용하여 Base64 인코딩
-    return base64.encode(charCodes.join(''));
+  private async waitForPlaybackEnd(): Promise<void> {
+    const checkInterval = setInterval(async () => {
+      try {
+        const state = await TrackPlayer.getState();
+        
+        if (state === State.Stopped || state === State.None || state === State.Ended) {
+          clearInterval(checkInterval);
+          console.log('TTS: 오디오 재생 완료');
+          this.isSpeaking = false;
+          await this.cleanup();
+        }
+      } catch (error) {
+        clearInterval(checkInterval);
+        console.error('TTS: 재생 상태 확인 오류:', error);
+        this.isSpeaking = false;
+      }
+    }, 500);
   }
 
   /**
@@ -314,10 +283,14 @@ class GeminiTTS {
    */
   private async cleanup(): Promise<void> {
     // 사운드 리소스 해제
-    if (this.currentSound) {
-      this.currentSound.stop();
-      this.currentSound.release();
-      this.currentSound = null;
+    try {
+      const state = await TrackPlayer.getState();
+      if (state === State.Playing || state === State.Paused) {
+        await TrackPlayer.stop();
+      }
+      await TrackPlayer.reset();
+    } catch (error) {
+      console.warn('TTS: TrackPlayer cleanup 중 오류:', error);
     }
 
     // 임시 파일 삭제
