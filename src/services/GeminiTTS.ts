@@ -239,7 +239,8 @@ class GeminiTTS {
       console.log('TTS: 오디오 파일 저장 완료:', filePath);
 
       // Sound 객체 생성 및 재생
-      this.currentSound = new Sound(filePath, '', (error) => {
+      // basePath를 undefined로 전달하여 절대 경로 사용
+      this.currentSound = new Sound(filePath, undefined, (error) => {
         if (error) {
           console.error('TTS: 사운드 로드 실패:', error);
           this.isSpeaking = false;
