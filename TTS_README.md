@@ -74,6 +74,44 @@ Tts.setConfig({ voiceName: 'ko-KR-Neural2-B' });
 - `react-native-config`: 환경 변수 관리
 - `react-native-base64`: Base64 인코딩
 
+## 문제 해결
+
+### "Unable to resolve module react-native-sound" 오류
+
+이 오류가 발생하면 다음 단계를 시도하세요:
+
+1. 의존성 재설치:
+   ```bash
+   # node_modules 및 캐시 삭제
+   rm -rf node_modules
+   npm cache clean --force
+   
+   # 의존성 재설치
+   npm install
+   ```
+
+2. Metro bundler 캐시 삭제:
+   ```bash
+   npm start -- --reset-cache
+   ```
+
+3. iOS의 경우 Pod 재설치:
+   ```bash
+   cd ios
+   pod deintegrate
+   pod install
+   cd ..
+   ```
+
+4. 앱 재빌드:
+   ```bash
+   # Android
+   npm run android
+   
+   # iOS
+   npm run ios
+   ```
+
 ## API 요금
 
 Google Cloud Text-to-Speech API는 무료 할당량이 있습니다:
