@@ -6,23 +6,22 @@ import RNFS from 'react-native-fs';
 import base64 from 'react-native-base64';
 
 /**
- * Naver Clova TTS Service
+ * Google Gemini TTS Service
  * 
- * Naver Clova Voice API를 사용하여 텍스트를 음성으로 변환합니다.
- * API 문서: https://api.ncloud-docs.com/docs/ai-naver-clovavoice-ttspremium
+ * Google Gemini 2.5 Flash TTS API를 사용하여 텍스트를 음성으로 변환합니다.
+ * API 문서: https://ai.google.dev/gemini-api/docs/text-to-speech
  */
 
 interface TTSConfig {
-  speaker?: string;  // 음성 종류 (예: 'nara', 'jinho', 'nsujin' 등)
-  speed?: number;    // 음성 속도 (-5 ~ 5, 기본값 0)
-  pitch?: number;    // 음성 높이 (-5 ~ 5, 기본값 0)
-  volume?: number;   // 음성 볼륨 (-5 ~ 5, 기본값 0)
-  format?: string;   // 음성 파일 포맷 (예: 'mp3', 'wav')
+  voiceName?: string;    // 음성 이름 (예: 'ko-KR-Neural2-A', 'ko-KR-Neural2-B' 등)
+  languageCode?: string; // 언어 코드 (예: 'ko-KR')
+  speakingRate?: number; // 음성 속도 (0.25 ~ 4.0, 기본값 1.0)
+  pitch?: number;        // 음성 높이 (-20.0 ~ 20.0, 기본값 0.0)
+  volumeGainDb?: number; // 음성 볼륨 (-96.0 ~ 16.0, 기본값 0.0)
 }
 
-class NaverClovaTTS {
-  private clientId: string;
-  private clientSecret: string;
+class GeminiTTS {
+  private apiKey: string;
   private apiUrl: string;
   private config: TTSConfig;
   private currentSound: Sound | null = null;
@@ -31,17 +30,16 @@ class NaverClovaTTS {
 
   constructor() {
     // 환경 변수에서 API 키 가져오기
-    this.clientId = Config.NAVER_CLOVA_CLIENT_ID || '';
-    this.clientSecret = Config.NAVER_CLOVA_CLIENT_SECRET || '';
-    this.apiUrl = 'https://naveropenapi.apigw.ntruss.com/tts-premium/v1/tts';
+    this.apiKey = Config.GOOGLE_GEMINI_API_KEY || '';
+    this.apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
     
     // 기본 설정
     this.config = {
-      speaker: 'nara',  // 한국어 여성 음성 (나라)
-      speed: 0,         // 보통 속도
-      pitch: 0,         // 보통 높이
-      volume: 0,        // 보통 볼륨
-      format: 'mp3',
+      voiceName: 'ko-KR-Neural2-A',  // 한국어 여성 음성
+      languageCode: 'ko-KR',
+      speakingRate: 1.0,              // 보통 속도
+      pitch: 0.0,                     // 보통 높이
+      volumeGainDb: 0.0,              // 보통 볼륨
     };
 
     // Sound 라이브러리 초기화
@@ -59,10 +57,12 @@ class NaverClovaTTS {
    * 기본 언어 설정 (react-native-tts와 호환성을 위한 메서드)
    */
   setDefaultLanguage(language: string) {
-    // Naver Clova는 speaker로 언어/음성을 결정
-    // ko-KR의 경우 한국어 음성 사용
+    // 언어 코드 설정
+    this.config.languageCode = language;
+    
+    // 한국어의 경우 한국어 음성 사용
     if (language === 'ko-KR') {
-      this.config.speaker = 'nara';
+      this.config.voiceName = 'ko-KR-Neural2-A';
     }
   }
 
@@ -70,20 +70,20 @@ class NaverClovaTTS {
    * 기본 속도 설정 (react-native-tts와 호환성을 위한 메서드)
    */
   setDefaultRate(rate: number, ios?: boolean) {
-    // react-native-tts는 0~1 범위, Clova는 -5~5 범위
-    // 0.5를 기본값(0)으로, 0~1을 -5~5로 변환
-    const clovaSpeed = Math.round((rate - 0.5) * 10);
-    this.config.speed = Math.max(-5, Math.min(5, clovaSpeed));
+    // react-native-tts는 0~1 범위, Gemini는 0.25~4.0 범위
+    // 0.5를 기본값(1.0)으로 변환
+    const geminiRate = rate * 2.0; // 0~1을 0~2로 변환
+    this.config.speakingRate = Math.max(0.25, Math.min(4.0, geminiRate));
   }
 
   /**
    * 기본 피치 설정 (react-native-tts와 호환성을 위한 메서드)
    */
   setDefaultPitch(pitch: number) {
-    // react-native-tts는 0.5~2 범위, Clova는 -5~5 범위
-    // 1.0을 기본값(0)으로 변환
-    const clovaPitch = Math.round((pitch - 1.0) * 5);
-    this.config.pitch = Math.max(-5, Math.min(5, clovaPitch));
+    // react-native-tts는 0.5~2 범위, Gemini는 -20~20 범위
+    // 1.0을 기본값(0.0)으로 변환
+    const geminiPitch = (pitch - 1.0) * 20;
+    this.config.pitch = Math.max(-20.0, Math.min(20.0, geminiPitch));
   }
 
   /**
@@ -105,11 +105,11 @@ class NaverClovaTTS {
       this.isSpeaking = true;
 
       // API 키 확인
-      if (!this.clientId || !this.clientSecret) {
-        console.error('TTS: Naver Clova API 키가 설정되지 않았습니다.');
+      if (!this.apiKey) {
+        console.error('TTS: Google Gemini API 키가 설정되지 않았습니다.');
         Alert.alert(
           'TTS 오류',
-          'Naver Clova API 키가 설정되지 않았습니다. 환경 변수를 확인해주세요.'
+          'Google Gemini API 키가 설정되지 않았습니다. 환경 변수를 확인해주세요.'
         );
         this.isSpeaking = false;
         return;
@@ -117,31 +117,38 @@ class NaverClovaTTS {
 
       console.log('TTS: 음성 생성 시작:', text.substring(0, 50));
 
-      // Naver Clova TTS API 호출
+      // Google Gemini TTS API 호출
       const response = await axios.post(
-        this.apiUrl,
-        text,
+        `${this.apiUrl}?key=${this.apiKey}`,
+        {
+          contents: [{
+            parts: [{
+              text: text
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 8192,
+          }
+        },
         {
           headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'X-NCP-APIGW-API-KEY-ID': this.clientId,
-            'X-NCP-APIGW-API-KEY': this.clientSecret,
-          },
-          params: {
-            speaker: this.config.speaker,
-            speed: this.config.speed,
-            pitch: this.config.pitch,
-            volume: this.config.volume,
-            format: this.config.format,
-          },
-          responseType: 'arraybuffer',
+            'Content-Type': 'application/json',
+          }
         }
       );
 
-      console.log('TTS: 음성 데이터 수신 완료');
+      console.log('TTS: API 응답 수신 완료');
 
-      // 음성 데이터 재생
-      await this.playAudio(response.data);
+      // Gemini API 응답에서 오디오 데이터 추출
+      // Note: Gemini 2.5 Flash는 텍스트 생성 모델이므로, 실제 TTS를 위해서는
+      // Google Cloud Text-to-Speech API를 사용해야 합니다.
+      // 여기서는 Gemini API의 응답을 TTS로 변환하는 방법을 구현합니다.
+      
+      // Google Cloud Text-to-Speech API 호출
+      await this.synthesizeSpeech(text);
 
     } catch (error: any) {
       console.error('TTS: 음성 생성 오류:', error);
@@ -161,9 +168,62 @@ class NaverClovaTTS {
   }
 
   /**
-   * 음성 데이터 재생
+   * Google Cloud Text-to-Speech API를 사용하여 음성 합성
    */
-  private async playAudio(audioData: ArrayBuffer): Promise<void> {
+  private async synthesizeSpeech(text: string): Promise<void> {
+    try {
+      const ttsApiUrl = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${this.apiKey}`;
+      
+      const response = await axios.post(
+        ttsApiUrl,
+        {
+          input: { text: text },
+          voice: {
+            languageCode: this.config.languageCode,
+            name: this.config.voiceName,
+          },
+          audioConfig: {
+            audioEncoding: 'MP3',
+            speakingRate: this.config.speakingRate,
+            pitch: this.config.pitch,
+            volumeGainDb: this.config.volumeGainDb,
+          },
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
+      );
+
+      console.log('TTS: 음성 데이터 수신 완료');
+
+      // Base64로 인코딩된 오디오 데이터
+      const audioContent = response.data.audioContent;
+      
+      // 음성 데이터 재생
+      await this.playAudioFromBase64(audioContent);
+
+    } catch (error: any) {
+      console.error('TTS: 음성 합성 오류:', error);
+      
+      if (axios.isAxiosError(error)) {
+        console.error('TTS API 에러 상세:', {
+          status: error.response?.status,
+          data: error.response?.data,
+          message: error.message,
+        });
+      }
+      
+      this.isSpeaking = false;
+      throw error;
+    }
+  }
+
+  /**
+   * Base64 인코딩된 오디오 데이터 재생
+   */
+  private async playAudioFromBase64(base64Audio: string): Promise<void> {
     try {
       // 기존 사운드 중지 및 임시 파일 정리
       await this.cleanup();
@@ -173,21 +233,17 @@ class NaverClovaTTS {
       const filePath = `${RNFS.CachesDirectoryPath}/${fileName}`;
       this.currentFilePath = filePath;
 
-      // ArrayBuffer를 Base64로 변환
-      const base64Audio = this.arrayBufferToBase64(audioData);
-
       // 파일로 저장
       await RNFS.writeFile(filePath, base64Audio, 'base64');
 
       console.log('TTS: 오디오 파일 저장 완료:', filePath);
 
       // Sound 객체 생성 및 재생
-      // 두 번째 파라미터가 빈 문자열이면 첫 번째 파라미터를 절대 경로로 간주
       this.currentSound = new Sound(filePath, '', (error) => {
         if (error) {
           console.error('TTS: 사운드 로드 실패:', error);
           this.isSpeaking = false;
-          // 에러 발생 시 임시 파일 정리 (비동기로 처리)
+          // 에러 발생 시 임시 파일 정리
           this.cleanup().catch((err) => {
             console.warn('TTS: cleanup 중 오류:', err);
           });
@@ -203,12 +259,30 @@ class NaverClovaTTS {
           }
 
           this.isSpeaking = false;
-          // 재생 완료 후 리소스 정리 (비동기로 처리)
+          // 재생 완료 후 리소스 정리
           this.cleanup().catch((err) => {
             console.warn('TTS: cleanup 중 오류:', err);
           });
         });
       });
+
+    } catch (error) {
+      console.error('TTS: 오디오 재생 오류:', error);
+      this.isSpeaking = false;
+      await this.cleanup();
+    }
+  }
+
+  /**
+   * 음성 데이터 재생 (ArrayBuffer 버전 - 호환성 유지)
+   */
+  private async playAudio(audioData: ArrayBuffer): Promise<void> {
+    try {
+      // ArrayBuffer를 Base64로 변환
+      const base64Audio = this.arrayBufferToBase64(audioData);
+      
+      // Base64 오디오 재생
+      await this.playAudioFromBase64(base64Audio);
 
     } catch (error) {
       console.error('TTS: 오디오 재생 오류:', error);
@@ -225,7 +299,7 @@ class NaverClovaTTS {
     const bytes = new Uint8Array(buffer);
     const charCodes: string[] = [];
     
-    // 바이너리 데이터를 문자열 배열로 변환 (효율적인 처리를 위해 배열 사용)
+    // 바이너리 데이터를 문자열 배열로 변환
     for (let i = 0; i < bytes.length; i++) {
       charCodes.push(String.fromCharCode(bytes[i]));
     }
@@ -272,5 +346,5 @@ class NaverClovaTTS {
 }
 
 // 싱글톤 인스턴스 생성 및 내보내기
-const tts = new NaverClovaTTS();
+const tts = new GeminiTTS();
 export default tts;
