@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Platform, Alert } from 'react-native';
+import { Alert } from 'react-native';
 import Config from 'react-native-config';
 import Sound from 'react-native-sound';
 import RNFS from 'react-native-fs';
@@ -21,10 +21,6 @@ interface TTSConfig {
 }
 
 class NaverClovaTTS {
-  // 32KB 청크 크기: Base64 인코딩 성능과 메모리 효율을 고려한 최적 값
-  // 너무 크면 메모리 사용량이 증가하고, 너무 작으면 청크 처리 오버헤드 증가
-  private static readonly BASE64_CHUNK_SIZE = 0x8000;
-  
   private clientId: string;
   private clientSecret: string;
   private apiUrl: string;
@@ -213,15 +209,15 @@ class NaverClovaTTS {
    */
   private arrayBufferToBase64(buffer: ArrayBuffer): string {
     const bytes = new Uint8Array(buffer);
-    let binaryString = '';
+    const charCodes: string[] = [];
     
-    // 바이너리 데이터를 문자열로 변환
+    // 바이너리 데이터를 문자열 배열로 변환 (효율적인 처리를 위해 배열 사용)
     for (let i = 0; i < bytes.length; i++) {
-      binaryString += String.fromCharCode(bytes[i]);
+      charCodes.push(String.fromCharCode(bytes[i]));
     }
     
     // react-native-base64를 사용하여 Base64 인코딩
-    return base64.encode(binaryString);
+    return base64.encode(charCodes.join(''));
   }
 
   /**
