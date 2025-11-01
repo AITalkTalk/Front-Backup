@@ -27,6 +27,7 @@ class NaverClovaTTS {
   private config: TTSConfig;
   private currentSound: Sound | null = null;
   private currentFilePath: string | null = null;
+  private isSpeaking: boolean = false;
 
   constructor() {
     // 환경 변수에서 API 키 가져오기
@@ -95,6 +96,14 @@ class NaverClovaTTS {
         return;
       }
 
+      // 이미 재생 중인 경우 기존 재생을 중지하고 새로운 재생 시작
+      if (this.isSpeaking) {
+        console.log('TTS: 기존 음성 중지 후 새로운 음성 재생');
+        await this.cleanup();
+      }
+
+      this.isSpeaking = true;
+
       // API 키 확인
       if (!this.clientId || !this.clientSecret) {
         console.error('TTS: Naver Clova API 키가 설정되지 않았습니다.');
@@ -102,6 +111,7 @@ class NaverClovaTTS {
           'TTS 오류',
           'Naver Clova API 키가 설정되지 않았습니다. 환경 변수를 확인해주세요.'
         );
+        this.isSpeaking = false;
         return;
       }
 
@@ -144,6 +154,7 @@ class NaverClovaTTS {
         });
       }
       
+      this.isSpeaking = false;
       // 사용자에게 에러 알림 (선택적)
       // Alert.alert('TTS 오류', '음성 생성 중 오류가 발생했습니다.');
     }
@@ -175,6 +186,7 @@ class NaverClovaTTS {
       this.currentSound = new Sound(filePath, '', (error) => {
         if (error) {
           console.error('TTS: 사운드 로드 실패:', error);
+          this.isSpeaking = false;
           // 에러 발생 시 임시 파일 정리 (비동기로 처리)
           this.cleanup().catch((err) => {
             console.warn('TTS: cleanup 중 오류:', err);
@@ -190,6 +202,7 @@ class NaverClovaTTS {
             console.error('TTS: 오디오 재생 실패');
           }
 
+          this.isSpeaking = false;
           // 재생 완료 후 리소스 정리 (비동기로 처리)
           this.cleanup().catch((err) => {
             console.warn('TTS: cleanup 중 오류:', err);
@@ -199,6 +212,7 @@ class NaverClovaTTS {
 
     } catch (error) {
       console.error('TTS: 오디오 재생 오류:', error);
+      this.isSpeaking = false;
       await this.cleanup();
     }
   }
@@ -249,6 +263,7 @@ class NaverClovaTTS {
   async stop(): Promise<void> {
     try {
       console.log('TTS: 음성 재생 중지');
+      this.isSpeaking = false;
       await this.cleanup();
     } catch (error) {
       console.error('TTS: 음성 중지 오류:', error);
