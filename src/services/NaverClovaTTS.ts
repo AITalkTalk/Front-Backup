@@ -3,6 +3,7 @@ import { Platform, Alert } from 'react-native';
 import Config from 'react-native-config';
 import Sound from 'react-native-sound';
 import RNFS from 'react-native-fs';
+import base64 from 'react-native-base64';
 
 /**
  * Naver Clova TTS Service
@@ -20,7 +21,7 @@ interface TTSConfig {
 }
 
 class NaverClovaTTS {
-  // 32KB 청크 크기: btoa() 함수의 성능과 메모리 효율을 고려한 최적 값
+  // 32KB 청크 크기: Base64 인코딩 성능과 메모리 효율을 고려한 최적 값
   // 너무 크면 메모리 사용량이 증가하고, 너무 작으면 청크 처리 오버헤드 증가
   private static readonly BASE64_CHUNK_SIZE = 0x8000;
   
@@ -208,25 +209,19 @@ class NaverClovaTTS {
 
   /**
    * ArrayBuffer를 Base64로 변환
-   * 큰 파일도 처리할 수 있도록 청크 단위로 변환
+   * React Native 환경에서 동작하는 Base64 인코딩
    */
   private arrayBufferToBase64(buffer: ArrayBuffer): string {
     const bytes = new Uint8Array(buffer);
-    const chunks: string[] = [];
-    const chunkSize = NaverClovaTTS.BASE64_CHUNK_SIZE;
+    let binaryString = '';
     
-    for (let i = 0; i < bytes.length; i += chunkSize) {
-      const end = Math.min(i + chunkSize, bytes.length);
-      const charCodes: string[] = [];
-      
-      // 청크 내 각 바이트를 문자로 변환
-      for (let j = i; j < end; j++) {
-        charCodes.push(String.fromCharCode(bytes[j]));
-      }
-      chunks.push(charCodes.join(''));
+    // 바이너리 데이터를 문자열로 변환
+    for (let i = 0; i < bytes.length; i++) {
+      binaryString += String.fromCharCode(bytes[i]);
     }
     
-    return btoa(chunks.join(''));
+    // react-native-base64를 사용하여 Base64 인코딩
+    return base64.encode(binaryString);
   }
 
   /**
