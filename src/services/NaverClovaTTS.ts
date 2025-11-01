@@ -20,6 +20,8 @@ interface TTSConfig {
 }
 
 class NaverClovaTTS {
+  private static readonly BASE64_CHUNK_SIZE = 0x8000; // 32KB chunks for Base64 conversion
+  
   private clientId: string;
   private clientSecret: string;
   private apiUrl: string;
@@ -170,11 +172,14 @@ class NaverClovaTTS {
       console.log('TTS: 오디오 파일 저장 완료:', filePath);
 
       // Sound 객체 생성 및 재생
+      // 두 번째 파라미터가 빈 문자열이면 첫 번째 파라미터를 절대 경로로 간주
       this.currentSound = new Sound(filePath, '', (error) => {
         if (error) {
           console.error('TTS: 사운드 로드 실패:', error);
-          // 에러 발생 시 임시 파일 정리
-          this.cleanup();
+          // 에러 발생 시 임시 파일 정리 (비동기로 처리)
+          this.cleanup().catch((err) => {
+            console.warn('TTS: cleanup 중 오류:', err);
+          });
           return;
         }
 
@@ -186,8 +191,10 @@ class NaverClovaTTS {
             console.error('TTS: 오디오 재생 실패');
           }
 
-          // 재생 완료 후 리소스 정리
-          this.cleanup();
+          // 재생 완료 후 리소스 정리 (비동기로 처리)
+          this.cleanup().catch((err) => {
+            console.warn('TTS: cleanup 중 오류:', err);
+          });
         });
       });
 
@@ -199,15 +206,22 @@ class NaverClovaTTS {
 
   /**
    * ArrayBuffer를 Base64로 변환
+   * 큰 파일도 처리할 수 있도록 청크 단위로 변환
    */
   private arrayBufferToBase64(buffer: ArrayBuffer): string {
     const bytes = new Uint8Array(buffer);
     const chunks: string[] = [];
-    const chunkSize = 0x8000; // 32KB chunks to prevent call stack issues
+    const chunkSize = NaverClovaTTS.BASE64_CHUNK_SIZE;
     
     for (let i = 0; i < bytes.length; i += chunkSize) {
-      const chunk = bytes.subarray(i, i + chunkSize);
-      chunks.push(String.fromCharCode.apply(null, Array.from(chunk)));
+      const end = Math.min(i + chunkSize, bytes.length);
+      let chunkStr = '';
+      
+      // 청크를 작은 단위로 나누어 처리하여 call stack 오버플로우 방지
+      for (let j = i; j < end; j++) {
+        chunkStr += String.fromCharCode(bytes[j]);
+      }
+      chunks.push(chunkStr);
     }
     
     return btoa(chunks.join(''));
