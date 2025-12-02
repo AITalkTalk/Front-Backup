@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View,
   Text,
   StyleSheet,
   SafeAreaView,
   Alert,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -172,12 +172,12 @@ const ChatSummaryScreen: React.FC = () => {
       {loading && <ActivityIndicator style={{ marginTop: 20 }} size="large" />}
 
       {summary && (
-        <View style={styles.summaryBox}>
+        <ScrollView style={styles.summaryBox} contentContainerStyle={styles.summaryContent}>
           <Text style={styles.label}>📅 날짜: {summary.date}</Text>
           <Text style={styles.label}>😊 감정: {summary.sentiment}</Text>
           <Text style={styles.label}>💬 내용:</Text>
           <Text style={styles.chat}>{summary.chat}</Text>
-        </View>
+        </ScrollView>
       )}
     </SafeAreaView>
   );
@@ -193,10 +193,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   summaryBox: {
+    flex: 1,
     backgroundColor: '#fff',
-    padding: 15,
     borderRadius: 10,
     elevation: 2,
+  },
+  summaryContent: {
+    padding: 15,
   },
   label: { fontSize: 16, marginBottom: 10, fontWeight: '500' },
   chat: { fontSize: 15, lineHeight: 22, color: '#333' },

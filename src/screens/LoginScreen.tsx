@@ -70,7 +70,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#6B7C1C" barStyle="light-content" />
       <View style={styles.logoContainer}>
-        <Text style={styles.logoText}>AI 똑똑</Text>
+        <Text style={styles.logoText}>아이똑똑</Text>
         <Text style={styles.subtitleText}>AI와 함께하는 대화, 퀴즈, 친구</Text>
       </View>
       
