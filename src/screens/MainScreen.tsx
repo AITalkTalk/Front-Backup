@@ -26,7 +26,7 @@ const MainScreen: React.FC<MainScreenProps> = ({ navigation }) => {
       <StatusBar backgroundColor="#6B7C1C" barStyle="light-content" />
       <View style={styles.headerContainer}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>AI 똑똑</Text>
+          <Text style={styles.headerTitle}>아이똑똑</Text>
           <TouchableOpacity 
             style={styles.profileButton}
             onPress={() => handleNavigation('MyPage')}
